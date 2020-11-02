@@ -64,7 +64,8 @@ best_err5 = 100
 
 def main():
 
-    global args
+    global args, best_err1, best_err5
+    
     args = parser.parse_args()
 
     normalize = transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
