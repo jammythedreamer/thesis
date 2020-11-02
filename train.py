@@ -93,12 +93,12 @@ def main():
 
     model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)
 
-    model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model).cuda()
 
     #print(model)
     #print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss().cuda()
 
     optimizer = optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
 
