@@ -22,6 +22,8 @@ import resnet as RN
 
 
 parser = argparse.ArgumentParser(description='thesis')
+parser.add_argument('--net_type', default='resnet', type=str,
+                    help='networktype: resnet, and pyamidnet')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
@@ -65,7 +67,7 @@ best_err5 = 100
 def main():
 
     global args, best_err1, best_err5
-    
+
     args = parser.parse_args()
 
     normalize = transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
