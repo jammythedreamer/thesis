@@ -93,14 +93,12 @@ def main():
 
     model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)
 
-    if torch.cuda.is_available(): model = torch.nn.DataParallel(model).cuda()
-    else: model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model)
 
     #print(model)
     #print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
-    if torch.cuda.is_available(): criterion = nn.CrossEntropyLoss().cuda
-    else: criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
 
     optimizer = optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
 
@@ -152,8 +150,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if torch.cuda.is_available(): input = input.cuda()
-        if torch.cuda.is_available(): target = target.cuda()
+        input = input.cuda()
+        target = target.cuda()
 
 
         if args.process == 'None':
