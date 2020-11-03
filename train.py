@@ -56,6 +56,12 @@ parser.add_argument('--process', dest='process', default='None', type=str,
                     help='process (options : None, cutout, mixup, cutmix, augmix)')
 parser.add_argument('--cutmix_prob', default=0, type=float,
                     help='cutmix probability')
+parser.add_argument('--cutout_prob', default=0, type=float,
+                    help='cutout probability')
+parser.add_argument('--cutout_n_holes', type=int, default=1,
+                    help='number of holes to cut out from image')
+parser.add_argument('--cutout_length', type=int, default=16,
+                    help='length of the holes')
 
 parser.set_defaults(bottleneck=True)
 parser.set_defaults(verbose=True)
@@ -162,7 +168,34 @@ def train(train_loader, model, criterion, optimizer, epoch):
             output = model(input)
             loss = criterion(output, target)
         elif args.process == 'cutout':
-            pass
+            r = np.random.rand(1)
+            if args.beta > 0 and r < args.cutmix_prob:
+                h = input.size(1)
+                w = input.size(2)
+
+                mask = np.ones((h, w), np.float32)
+
+                for n in range(args.cutout_n_holes):
+                    y = np.random.randint(h)
+                    x = np.random.randint(w)
+
+                    y1 = np.clip(y - args.cutout_length // 2, 0, h)
+                    y2 = np.clip(y + args.cutout_length // 2, 0, h)
+                    x1 = np.clip(x - args.cutout_length // 2, 0, w)
+                    x2 = np.clip(x + args.cutout_length // 2, 0, w)
+
+                    mask[y1: y2, x1: x2] = 0.
+
+                mask = torch.from_numpy(mask)
+                mask = mask.expand_as(input)
+                input = input * mask
+
+                output = model(input)
+                loss = criterion(output, target)
+            else:
+                # compute output
+                output = model(input)
+                loss = criterion(output, target)    
         elif args.process == 'mixup':
             pass
         elif args.process == 'cutmix':
