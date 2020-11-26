@@ -16,6 +16,8 @@ import torch.nn.functional as F
 
 import torch.optim as optim
 
+from torch.autograd import Variable
+
 import numpy as np
 
 import resnet as RN
@@ -53,15 +55,20 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix)')
-parser.add_argument('--cutmix_prob', default=0, type=float,
-                    help='cutmix probability')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
                     help='number of holes to cut out from image')
 parser.add_argument('--cutout_length', type=int, default=16,
                     help='length of the holes')
+parser.add_argument('--mixup_alpha', default=1., type=float,
+                    help='mixup interpolation coefficient (default: 1)')
+parser.add_argument('--cutmix_prob', default=0, type=float,
+                    help='cutmix probability')
+parser.add_argument('--divmix_prob', default=0, type=float,
+                    help='divmix probability')
+
 
 parser.set_defaults(bottleneck=True)
 parser.set_defaults(verbose=True)
@@ -197,7 +204,24 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 output = model(input)
                 loss = criterion(output, target)    
         elif args.process == 'mixup':
-            pass
+            alpha = args.mixup_alpha
+            if alpha > 0:
+                lam = np.random.beta(alpha, alpha)
+            else:
+                lam = 1
+
+            batch_size = input.size()[0]
+            index = torch.randperm(batch_size).cuda()
+
+            input = lam * input + (1 - lam) * input[index, :]
+            
+            target_a = target
+            target_b = target[index]
+
+            inputs, targets_a, targets_b = map(Variable, (input, target_a, target_b))
+            output = model(input)
+            loss = lam * criterion(output, target_a) + (1 - lam) * criterion(output, target_b)
+
         elif args.process == 'cutmix':
             r = np.random.rand(1)
             if args.beta > 0 and r < args.cutmix_prob:
@@ -219,6 +243,31 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 loss = criterion(output, target)
         elif args.process == 'augmix':
             pass
+        elif args.process == 'divmix':
+            r = np.random.rand(1)
+            if r < args.cutmix_prob:
+                # generate mixed sample
+                lam = np.random.beta(args.beta, args.beta)
+                rand_index1 = torch.randperm(input.size()[0]).cuda()
+                rand_index2 = torch.randperm(input.size()[0]).cuda()
+                rand_index3 = torch.randperm(input.size()[0]).cuda()
+                target_1 = target
+                target_2 = target[rand_index1]
+                target_3 = target[rand_index2]
+                target_4 = target[rand_index3]
+                bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), lam)
+                h = input.size(1)
+                w = input.size(2)
+                input[:, :, w/2:w, 0:h/2] = input[rand_index1, :, w/2:w, 0:h/2]
+                input[:, :, 0:w/2, h/2:h] = input[rand_index2, :, 0:w/2, h/2:h]
+                input[:, :, w/2:w, h/2:h] = input[rand_index3, :, w/2:w, h/2:h]
+                # compute output
+                output = model(input)
+                loss = 0.25 * (criterion(output, target_1) + criterion(output, target_2) + criterion(output, target_3) + criterion(output, target_4) )
+            else:
+                # compute output
+                output = model(input)
+                loss = criterion(output, target)
 
         # measure accuracy and record loss
         err1, err5 = accuracy(output.data, target, topk=(1,5))
