@@ -25,10 +25,11 @@ import utils
 import numpy as np
 
 import resnet as RN
+import pyramidnet as PYRM
 
 
 parser = argparse.ArgumentParser(description='thesis')
-parser.add_argument('--net_type', default='resnet', type=str,
+parser.add_argument('--net_type', default='pyramidnet', type=str,
                     help='networktype: resnet, and pyamidnet')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -165,7 +166,13 @@ def main():
             num_workers=args.workers, pin_memory=True)
         numberofclass = 1000
 
-    model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)
+    if args.net_type == 'resnet':
+        model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)
+    elif args.net_type == 'pyramidnet':
+        model = PYRM.PyramidNet(args.dataset, args.depth, args.alpha, numberofclass, args.bottleneck)
+    else:
+        raise Exception('unknown network architecture: {}'.format(args.net_type))
+
 
     model = torch.nn.DataParallel(model).cuda()
 
