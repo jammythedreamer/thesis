@@ -21,7 +21,6 @@ import torch.utils.data
 import torch.utils.data.distributed
 
 from torch.autograd import Variable
-import utils
 import numpy as np
 
 import resnet as RN
@@ -60,7 +59,7 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix)')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
@@ -73,6 +72,11 @@ parser.add_argument('--cutmix_prob', default=0, type=float,
                     help='cutmix probability')
 parser.add_argument('--divmix_prob', default=0, type=float,
                     help='divmix probability')
+parser.add_argument('--cutmixup_alpha', default=1, type=float,
+                    help='mixup interpolation coefficient (default: 1)')
+parser.add_argument('--cutmixup_prob', default=0, type=float,
+                    help='cutmixup probability')
+
 
 
 parser.set_defaults(bottleneck=True)
@@ -123,48 +127,6 @@ def main():
             numberofclass = 10
         else:
             raise Exception('unknown dataset : {}'.format(args.dataset))
-
-    elif args.dataset == 'imagenet':
-        traindir = os.path.join('/home/data/ILSVRC/train')
-        valdir = os.path.join('/home/data/ILSVRC/val')
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
-
-        jittering = utils.ColorJitter(brightness=0.4, contrast=0.4,
-                                      saturation=0.4)
-        lighting = utils.Lighting(alphastd=0.1,
-                                  eigval=[0.2175, 0.0188, 0.0045],
-                                  eigvec=[[-0.5675, 0.7192, 0.4009],
-                                          [-0.5808, -0.0045, -0.8140],
-                                          [-0.5836, -0.6948, 0.4203]])
-
-        train_dataset = datasets.ImageFolder(
-            traindir,
-            transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                jittering,
-                lighting,
-                normalize,
-            ]))
-
-        train_sampler = None
-
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-            num_workers=args.workers, pin_memory=True, sampler=train_sampler)
-
-        val_loader = torch.utils.data.DataLoader(
-            datasets.ImageFolder(valdir, transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                normalize,
-            ])),
-            batch_size=args.batch_size, shuffle=False,
-            num_workers=args.workers, pin_memory=True)
-        numberofclass = 1000
 
     if args.net_type == 'resnet':
         model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)
@@ -306,8 +268,31 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 # compute output
                 output = model(input)
                 loss = criterion(output, target)
-        elif args.process == 'augmix':
-            pass
+        elif args.process == 'cutmixup':
+            r = np.random.rand(1)
+            alpha = args.cutmixup_alpha
+            if alpha > 0:
+                mixuplam = np.random.beta(alpha, alpha)
+            else:
+                mixuplam = 1
+
+            if args.beta > 0 and r < args.cutmixup_prob:
+                # generate mixed sample
+                cutmixlam = np.random.beta(args.beta, args.beta)
+                rand_index = torch.randperm(input.size()[0]).cuda()
+                target_a = target
+                target_b = target[rand_index]
+                bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), cutmixlam)
+                input[:, :, bbx1:bbx2, bby1:bby2] = mixuplam * input[:, :, bbx1:bbx2, bby1:bby2] + (1-mixuplam) * input[rand_index, :, bbx1:bbx2, bby1:bby2]
+                # adjust lambda to exactly match pixel ratio
+                cutmixlam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (input.size()[-1] * input.size()[-2]))
+                # compute output
+                output = model(input)
+                loss = criterion(output, target_a) * cutmixlam*mixuplam + criterion(output, target_b) * (1. - cutmixlam * mixuplam)
+            else:
+                # compute output
+                output = model(input)
+                loss = criterion(output, target)
         elif args.process == 'divmix':
             r = np.random.rand(1)
             if r < args.cutmix_prob:
