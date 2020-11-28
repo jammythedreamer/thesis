@@ -297,9 +297,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 loss = criterion(output, target)
         elif args.process == 'divmix':
             r = np.random.rand(1)
-            if r < args.cutmix_prob:
+            if r < args.divmix_prob:
                 # generate mixed sample
-                lam = np.random.beta(args.beta, args.beta)
                 rand_index1 = torch.randperm(input.size()[0]).cuda()
                 rand_index2 = torch.randperm(input.size()[0]).cuda()
                 rand_index3 = torch.randperm(input.size()[0]).cuda()
@@ -307,12 +306,11 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 target_2 = target[rand_index1]
                 target_3 = target[rand_index2]
                 target_4 = target[rand_index3]
-                bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), lam)
                 h = input.size(1)
                 w = input.size(2)
-                input[:, :, w/2:w, 0:h/2] = input[rand_index1, :, w/2:w, 0:h/2]
-                input[:, :, 0:w/2, h/2:h] = input[rand_index2, :, 0:w/2, h/2:h]
-                input[:, :, w/2:w, h/2:h] = input[rand_index3, :, w/2:w, h/2:h]
+                input[:, :, w//2:w, 0:h//2] = input[rand_index1, :, w//2:w, 0:h//2]
+                input[:, :, 0:w//2, h//2:h] = input[rand_index2, :, 0:w//2, h//2:h]
+                input[:, :, w//2:w, h//2:h] = input[rand_index3, :, w//2:w, h//2:h]
                 # compute output
                 output = model(input)
                 loss = 0.25 * (criterion(output, target_1) + criterion(output, target_2) + criterion(output, target_3) + criterion(output, target_4) )
