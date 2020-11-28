@@ -286,6 +286,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 input[:, :, bbx1:bbx2, bby1:bby2] = mixuplam * input[:, :, bbx1:bbx2, bby1:bby2] + (1-mixuplam) * input[rand_index, :, bbx1:bbx2, bby1:bby2]
                 # adjust lambda to exactly match pixel ratio
                 cutmixlam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (input.size()[-1] * input.size()[-2]))
+
+                inputs, targets_a, targets_b = map(Variable, (input, target_a, target_b))
                 # compute output
                 output = model(input)
                 loss = criterion(output, target_a) * cutmixlam*mixuplam + criterion(output, target_b) * (1. - cutmixlam * mixuplam)
