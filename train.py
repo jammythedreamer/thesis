@@ -22,6 +22,7 @@ import torch.utils.data.distributed
 
 from torch.autograd import Variable
 import numpy as np
+import copy
 
 import resnet as RN
 import pyramidnet as PYRM
@@ -59,7 +60,7 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup)')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
@@ -76,6 +77,10 @@ parser.add_argument('--cutmixup_alpha', default=1, type=float,
                     help='mixup interpolation coefficient (default: 1)')
 parser.add_argument('--cutmixup_prob', default=0, type=float,
                     help='cutmixup probability')
+parser.add_argument('--aroundmix_alpha', default=1, type=float,
+                    help='aroundmix interpolation coefficient (default: 1)')
+parser.add_argument('--aroundmix_prob', default=0, type=float,
+                    help='aroundmix probability')
 
 
 
@@ -318,6 +323,32 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 # compute output
                 output = model(input)
                 loss = criterion(output, target)
+        elif args.process == 'aroundmix':
+            alpha = args.aroundmix_alpha
+            r = np.random.rand(1)
+            if r < args.aroundmix_prob:
+                h = input.size(1)
+                w = input.size(2)
+
+                inputi = copy.deepcopy(input)
+                inputi = inputi * (1 - alpha * 8)
+                inputi[:,:,:w-1,:] = inputi[:,:,:w-1,:] + alpha * input[:,:,1:,:]
+                inputi[:,:,:w-1,:h-1] = inputi[:,:,:w-1,:h-1] + alpha * input[:,:,1:,1:]
+                inputi[:,:,:,:h-1] = inputi[:,:,:,:h-1] + alpha * input[:,:,:,1:]
+                inputi[:,:,1:,:h-1] = inputi[:,:,1:,:h-1] + alpha * input[:,:,:w-1,1:]
+                inputi[:,:,1:,:] = inputi[:,:,1:,:] + alpha * input[:,:,:w-1,:]
+                inputi[:,:,1:,1:] = inputi[:,:,1:,1:] + alpha * input[:,:,:w-1,:h-1]
+                inputi[:,:,:,1:] = inputi[:,:,:,1:] + alpha * input[:,:,:,:h-1]
+                inputi[:,:,:w-1,1:] = inputi[:,:,:w-1,1:] + alpha * input[:,:,1:,:h-1]
+                input = inputi
+
+                output = model(input)
+                loss = criterion(output, target)
+            else :
+                output = model(input)
+                loss = criterion(output, target)
+        else:
+            raise Exception('unknown data augmentation process: {}'.format(args.process))
 
         # measure accuracy and record loss
         err1, err5 = accuracy(output.data, target, topk=(1,5))
