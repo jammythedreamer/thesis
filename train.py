@@ -332,14 +332,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
                 inputi = copy.deepcopy(input)
                 inputi = inputi * (1 - alpha * 8)
-                inputi[:,:,:w-1,:] = inputi[:,:,:w-1,:] + alpha * input[:,:,1:,:]
-                inputi[:,:,:w-1,:h-1] = inputi[:,:,:w-1,:h-1] + alpha * input[:,:,1:,1:]
-                inputi[:,:,:,:h-1] = inputi[:,:,:,:h-1] + alpha * input[:,:,:,1:]
-                inputi[:,:,1:,:h-1] = inputi[:,:,1:,:h-1] + alpha * input[:,:,:w-1,1:]
-                inputi[:,:,1:,:] = inputi[:,:,1:,:] + alpha * input[:,:,:w-1,:]
-                inputi[:,:,1:,1:] = inputi[:,:,1:,1:] + alpha * input[:,:,:w-1,:h-1]
-                inputi[:,:,:,1:] = inputi[:,:,:,1:] + alpha * input[:,:,:,:h-1]
-                inputi[:,:,:w-1,1:] = inputi[:,:,:w-1,1:] + alpha * input[:,:,1:,:h-1]
+                inputi[:,:,0:w-1,:] = inputi[:,:,0:w-1,:] + alpha * input[:,:,1:w,:]
+                inputi[:,:,0:w-1,0:h-1] = inputi[:,:,0:w-1,0:h-1] + alpha * input[:,:,1:w,1:h]
+                inputi[:,:,:,0:h-1] = inputi[:,:,:,0:h-1] + alpha * input[:,:,:,1:h]
+                inputi[:,:,1:w,0:h-1] = inputi[:,:,1:w,0:h-1] + alpha * input[:,:,0:w-1,1:h]
+                inputi[:,:,1:w,:] = inputi[:,:,1:w,:] + alpha * input[:,:,0:w-1,:]
+                inputi[:,:,1:w,1:h] = inputi[:,:,1:w,1:h] + alpha * input[:,:,0:w-1,0:h-1]
+                inputi[:,:,:,1:h] = inputi[:,:,:,1:h] + alpha * input[:,:,:,0:h-1]
+                inputi[:,:,0:w-1,1:h] = inputi[:,:,0:w-1,1:h] + alpha * input[:,:,1:w,0:h-1]
                 input = inputi
 
                 output = model(input)
