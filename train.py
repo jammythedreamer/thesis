@@ -326,8 +326,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             alpha = args.aroundmix_alpha
             r = np.random.rand(1)
             if r < args.aroundmix_prob:
-                h = input.size[](2)
-                w = input.size[](3)
+                h = input.size()[2]
+                w = input.size()[3]
 
                 inputi = copy.deepcopy(input)
                 inputi = inputi * (1 - alpha * 8)
