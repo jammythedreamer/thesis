@@ -207,7 +207,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             loss = criterion(output, target)
         elif args.process == 'cutout':
             r = np.random.rand(1)
-            if args.beta > 0 and r < args.cutmix_prob:
+            if args.beta > 0 and r < args.cutout_prob:
                 h = input.size(1)
                 w = input.size(2)
 
@@ -360,13 +360,15 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 mask2 = mask2 - mask
 
                 mask = torch.from_numpy(mask)
+
+
+                mask2 = torch.from_numpy(mask2)
+                mask2 = mask2.expand_as(input[0])
+                mask2 = mask2.expand_as(input)
                 mask = mask.expand_as(input[0])
                 mask = mask.expand_as(input)
                 input = input * mask
                 
-                mask2 = torch.from_numpy(mask2)
-                mask2 = mask2.expand_as(input[0])
-                mask2 = mask2.expand_as(input)
                 cover = input[rand_index, :] * mask2
                 
                 input = input + cover
