@@ -351,15 +351,26 @@ def train(train_loader, model, criterion, optimizer, epoch):
             if r < args.randommix_prob:
                 h = input.size(1)
                 w = input.size(2)
+                rand_index = torch.randperm(input.size()[0]).cuda()
+                target2 = target[rand_index1]
 
-                mask = np.random.randint(1, size = (h, w))
-                mask = torch.from(mask)
-                
+                mask = np.random.randint(2, size = (h, w))
+                lam = np.sum(mask) / (h * w)
+                mask2 = np.ones((h, w), np.float32)
+                mask2 = mask2 - mask
+
+                mask = torch.from_numpy(mask)
                 mask = mask.expand_as(input)
                 input = input * mask
                 
+                mask2 = torch.from_numpy(mask2)
+                mask2 = mask2.expand_as(input)
+                cover = input[rand_index, :] * mask2
+                
+                input = input + cover
+
                 output = model(input)
-                loss = criterion(output, target)
+                loss = lam * criterion(output, target) + (1. - lam) * criterion(output, target2)
             else :
                 output = model(input)
                 loss = criterion(output, target)
