@@ -352,7 +352,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 h = input.size(1)
                 w = input.size(2)
                 rand_index = torch.randperm(input.size()[0]).cuda()
-                target2 = target[rand_index1]
+                target2 = target[rand_index]
 
                 mask = np.random.randint(2, size = (h, w))
                 lam = np.sum(mask) / (h * w)
