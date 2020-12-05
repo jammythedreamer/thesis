@@ -3,8 +3,6 @@ import os
 import shutil
 import time
 
-
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -60,7 +58,7 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix)')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix, randommix)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
@@ -81,7 +79,8 @@ parser.add_argument('--aroundmix_alpha', default=1, type=float,
                     help='aroundmix interpolation coefficient (default: 1)')
 parser.add_argument('--aroundmix_prob', default=0, type=float,
                     help='aroundmix probability')
-
+parser.add_argument('--randommix_prob', default=0, type=float,
+                    help='randommix probability')
 
 
 parser.set_defaults(bottleneck=True)
@@ -342,6 +341,23 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 inputi[:,:,0:w-1,1:h] = inputi[:,:,0:w-1,1:h] + alpha * input[:,:,1:w,0:h-1]
                 input = inputi
 
+                output = model(input)
+                loss = criterion(output, target)
+            else :
+                output = model(input)
+                loss = criterion(output, target)
+        elif args.process == 'randommix':
+            r = np.random.rand(1)
+            if r < args.randommix_prob:
+                h = input.size(1)
+                w = input.size(2)
+
+                mask = np.random.randint(1, size = (h, w))
+                mask = torch.from(mask)
+                
+                mask = mask.expand_as(input)
+                input = input * mask
+                
                 output = model(input)
                 loss = criterion(output, target)
             else :
