@@ -360,10 +360,12 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 mask2 = mask2 - mask
 
                 mask = torch.from_numpy(mask)
+                mask = mask.expand_as(input[0])
                 mask = mask.expand_as(input)
                 input = input * mask
                 
                 mask2 = torch.from_numpy(mask2)
+                mask2 = mask2.expand_as(input[0])
                 mask2 = mask2.expand_as(input)
                 cover = input[rand_index, :] * mask2
                 
