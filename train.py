@@ -199,7 +199,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         input = input.cuda()
         target = target.cuda()
-
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
         if args.process == 'None':
             # compute output
@@ -226,7 +226,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
                 mask = torch.from_numpy(mask)
                 mask = mask.expand_as(input)
-                mask.cuda()
                 input = input * mask
 
                 output = model(input)
@@ -366,11 +365,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 mask2 = torch.from_numpy(mask2)
                 mask2 = mask2.expand_as(input)
                 mask = mask.expand_as(input)
-                mask.cuda()
                 input = input * mask
                 
                 cover = input[rand_index, :] * mask2
-                cover.cuda()
+                
                 input = input + cover
 
                 output = model(input)
