@@ -370,7 +370,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 
                 mask2 = mask2.cuda()
                 cover = input[rand_index, :] * mask2
-                cover = cover.cuda()
                 input = input + cover
 
                 output = model(input)
