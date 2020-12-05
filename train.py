@@ -208,8 +208,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         elif args.process == 'cutout':
             r = np.random.rand(1)
             if args.beta > 0 and r < args.cutout_prob:
-                h = input.size(1)
-                w = input.size(2)
+                h = input.size()[2]
+                w = input.size()[3]
 
                 mask = np.ones((h, w), np.float32)
 
@@ -310,8 +310,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 target_2 = target[rand_index1]
                 target_3 = target[rand_index2]
                 target_4 = target[rand_index3]
-                h = input.size(1)
-                w = input.size(2)
+                h = input.size()[2]
+                w = input.size()[3]
                 input[:, :, w//2:w, 0:h//2] = input[rand_index1, :, w//2:w, 0:h//2]
                 input[:, :, 0:w//2, h//2:h] = input[rand_index2, :, 0:w//2, h//2:h]
                 input[:, :, w//2:w, h//2:h] = input[rand_index3, :, w//2:w, h//2:h]
@@ -326,8 +326,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             alpha = args.aroundmix_alpha
             r = np.random.rand(1)
             if r < args.aroundmix_prob:
-                h = input.size(1)
-                w = input.size(2)
+                h = input.size[](2)
+                w = input.size[](3)
 
                 inputi = copy.deepcopy(input)
                 inputi = inputi * (1 - alpha * 8)
@@ -349,8 +349,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         elif args.process == 'randommix':
             r = np.random.rand(1)
             if r < args.randommix_prob:
-                h = input.size(1)
-                w = input.size(2)
+                h = input.size()[2]
+                w = input.size()[3]
                 rand_index = torch.randperm(input.size()[0]).cuda()
                 target2 = target[rand_index]
 
@@ -363,9 +363,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
 
                 mask2 = torch.from_numpy(mask2)
-                mask2 = mask2.expand_as(input[0])
                 mask2 = mask2.expand_as(input)
-                mask = mask.expand_as(input[0])
                 mask = mask.expand_as(input)
                 input = input * mask
                 
