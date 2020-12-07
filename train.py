@@ -297,7 +297,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 inputs, targets_a, targets_b = map(Variable, (input, target_a, target_b))
                 # compute output
                 output = model(input)
-                loss = criterion(output, target_a) * cutmixlam*mixuplam + criterion(output, target_b) * (1. - cutmixlam * mixuplam)
+                loss = criterion(output, target_a) * (1. - (1. - cutmixlam) * (1. - mixuplam)) + criterion(output, target_b) * (1. - cutmixlam) * (1. - mixuplam)
             else:
                 # compute output
                 output = model(input)
