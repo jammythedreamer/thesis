@@ -361,8 +361,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             index = torch.randperm(batch_size).cuda()
             h, w = input.size()[2], input.size()[3]
             shorter = min(h,w)
-            lam_i = lam / (1/6 * shorter * (shorter/4 + 1) * (shorter/2 + 1))
-            for i in range(shorter):
+            lam_i = lam / ((1/6) * shorter * (shorter/4 + 1) * (shorter/2 + 1))
+            for i in range(shorter/2):
                 w_i = (i*w)//shorter
                 h_i = (i*h)//shorter
                 input[:,:,w_i:w-w_i,h_i:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i] + lam_i * input[index:,:,w_i:w-w_i,h_i:h-h_i]
