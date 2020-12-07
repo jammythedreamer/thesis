@@ -361,12 +361,18 @@ def train(train_loader, model, criterion, optimizer, epoch):
             index = torch.randperm(batch_size).cuda()
             h, w = input.size()[2], input.size()[3]
             shorter = min(h,w)
-            lam_i = lam / ((1/6) * shorter * (shorter/4 + 1) * (shorter/2 + 1))
+            lam_unit = lam / ((1/6) * (shorter/2) * (shorter/2 + 1) * (shorter/2 - 4))
             for i in range(shorter//2):
                 w_i = (i*w)//shorter
+                w_next = ((i+1)*w)//shorter
                 h_i = (i*h)//shorter
-                input[:,:,w_i:w-w_i,h_i:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i] + lam_i * input[index,:,w_i:w-w_i,h_i:h-h_i]
-            
+                h_next = ((i+1)*h)//shorter
+                lam_i = i * lam_unit
+                input[:,:,w_i:w-w_i,h_i:h-h_i-1] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i-1] + lam_i * input[:,:,w_i:w-w_i,h_i:h-h_i-1]
+                input[:,:,w-w_next:w-w_i,h_i+1:h-h_i] = (1-lam_i) * input[:,:,w-w_next:w-w_i,h_i+1:h-h_i] + lam_i * input[:,:,w-w_next:w-w_i,h_i+1:h-h_i]
+                input[:,:,w_i+1:w-w_i,h_i:h_next] = (1-lam_i) * input[:,:,w_i+1:w-w_i,h_i:h_next] + lam_i * input[:,:,w_i+1:w-w_i,h_i:h_next]
+                input[:,:,w_i:w-w_i-1,h-h_next:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i-1,h-h_next:h-h_i] + lam_i * input[:,:,w_i:w-w_i-1,h-h_next:h-h_i]
+
             target_a = target
             target_b = target[index]
 
