@@ -58,7 +58,7 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix, randommix)')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
@@ -79,8 +79,11 @@ parser.add_argument('--aroundmix_alpha', default=1, type=float,
                     help='aroundmix interpolation coefficient (default: 1)')
 parser.add_argument('--aroundmix_prob', default=0, type=float,
                     help='aroundmix probability')
-parser.add_argument('--randommix_prob', default=0, type=float,
-                    help='randommix probability')
+parser.add_argument('--fademixup_alpha', default=1, type=float,
+                    help='fademixup interpolation coefficient (default: 1)')
+parser.add_argument('--fademixup_prob', default=0, type=float,
+                    help='fademixup probability')
+
 
 
 parser.set_defaults(bottleneck=True)
@@ -346,37 +349,31 @@ def train(train_loader, model, criterion, optimizer, epoch):
             else :
                 output = model(input)
                 loss = criterion(output, target)
-        elif args.process == 'randommix':
-            r = np.random.rand(1)
-            if r < args.randommix_prob:
-                h = input.size()[2]
-                w = input.size()[3]
-                rand_index = torch.randperm(input.size()[0]).cuda()
-                target2 = target[rand_index]
+        elif args.process == 'fademixup':
 
-                mask = np.random.randint(2, size = (h, w))
-                lam = np.sum(mask) / (h * w)
-                mask2 = np.ones((h, w), np.float32)
-                mask2 = mask2 - mask
+            alpha = args.fademixup_alpha
+            if alpha > 0:
+                lam = np.random.beta(alpha, alpha)
+            else:
+                lam = 1
 
-                mask = torch.from_numpy(mask)
+            batch_size = input.size()[0]
+            index = torch.randperm(batch_size).cuda()
+            h, w = input.size()[2], input.size()[3]
+            shorter = min(h,w)
+            lam_i = lam / (1/6 * shorter * (shorter + 1) * (2*shorter + 1))
+            for i in range(shorter):
+                w_i = (i*w)//shorter
+                h_i = (i*h)//shorter
+                input[:,:,w_i:w-w_i,h_i:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i] + lam_i * input[index:,:,w_i:w-w_i,h_i:h-h_i]
+            
+            target_a = target
+            target_b = target[index]
 
+            inputs, targets_a, targets_b = map(Variable, (input, target_a, target_b))
+            output = model(input)
+            loss = (1-lam) * criterion(output, target_a) + lam * criterion(output, target_b)
 
-                mask2 = torch.from_numpy(mask2)
-                mask2 = mask2.expand_as(input)
-                mask = mask.expand_as(input)
-                mask = mask.cuda()
-                input = input * mask
-                
-                mask2 = mask2.cuda()
-                cover = input[rand_index, :] * mask2
-                input = input + cover
-
-                output = model(input)
-                loss = lam * criterion(output, target) + (1. - lam) * criterion(output, target2)
-            else :
-                output = model(input)
-                loss = criterion(output, target)
         else:
             raise Exception('unknown data augmentation process: {}'.format(args.process))
 
