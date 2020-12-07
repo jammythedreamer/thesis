@@ -365,7 +365,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             for i in range(shorter//2):
                 w_i = (i*w)//shorter
                 h_i = (i*h)//shorter
-                input[:,:,w_i:w-w_i,h_i:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i] + lam_i * input[index:,:,w_i:w-w_i,h_i:h-h_i]
+                input[:,:,w_i:w-w_i,h_i:h-h_i] = (1-lam_i) * input[:,:,w_i:w-w_i,h_i:h-h_i] + lam_i * input[index,:,w_i:w-w_i,h_i:h-h_i]
             
             target_a = target
             target_b = target[index]
