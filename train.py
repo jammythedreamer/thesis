@@ -390,7 +390,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         elif args.process == 'softcutout':
             r = np.random.rand(1)
             alpha = args.softcutout_alpha
-            if args.beta > 0 and r < args.cutout_prob:
+            if args.beta > 0 and r < args.softcutout_prob:
                 h = input.size()[2]
                 w = input.size()[3]
 
@@ -400,10 +400,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                     y = np.random.randint(h)
                     x = np.random.randint(w)
 
-                    y1 = np.clip(y - args.cutout_length // 2, 0, h)
-                    y2 = np.clip(y + args.cutout_length // 2, 0, h)
-                    x1 = np.clip(x - args.cutout_length // 2, 0, w)
-                    x2 = np.clip(x + args.cutout_length // 2, 0, w)
+                    y1 = np.clip(y - args.softcutout_length // 2, 0, h)
+                    y2 = np.clip(y + args.softcutout_length // 2, 0, h)
+                    x1 = np.clip(x - args.softcutout_length // 2, 0, w)
+                    x2 = np.clip(x + args.softcutout_length // 2, 0, w)
 
                     mask[y1: y2, x1: x2] = alpha
 
