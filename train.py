@@ -58,7 +58,7 @@ parser.add_argument('--expname', default='TEST', type=str,
 parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--process', dest='process', default='None', type=str,
-                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix)')
+                    help='process (options : None, cutout, mixup, cutmix, augmix, divmix, cutmixup, aroundmix, fademixup, softcutout)')
 parser.add_argument('--cutout_prob', default=0, type=float,
                     help='cutout probability')
 parser.add_argument('--cutout_n_holes', type=int, default=1,
@@ -83,6 +83,14 @@ parser.add_argument('--fademixup_alpha', default=1, type=float,
                     help='fademixup interpolation coefficient (default: 1)')
 parser.add_argument('--fademixup_prob', default=0, type=float,
                     help='fademixup probability')
+parser.add_argument('--softcutout_prob', default=0, type=float,
+                    help='softcutout probability')
+parser.add_argument('--softcutout_n_holes', type=int, default=1,
+                    help='number of holes to cut out from image')
+parser.add_argument('--softcutout_length', type=int, default=16,
+                    help='length of the holes')
+parser.add_argument('--softcutout_alpha', type=float, default=1.0,
+                    help='softcutout strength')
 
 
 
@@ -379,7 +387,38 @@ def train(train_loader, model, criterion, optimizer, epoch):
             inputs, targets_a, targets_b = map(Variable, (input, target_a, target_b))
             output = model(input)
             loss = (1-lam) * criterion(output, target_a) + lam * criterion(output, target_b)
+        elif args.process == 'softcutout':
+            r = np.random.rand(1)
+            alpha = args.softcutout_alpha
+            if args.beta > 0 and r < args.cutout_prob:
+                h = input.size()[2]
+                w = input.size()[3]
 
+                mask = np.ones((h, w), np.float32)
+
+                for n in range(args.cutout_n_holes):
+                    y = np.random.randint(h)
+                    x = np.random.randint(w)
+
+                    y1 = np.clip(y - args.cutout_length // 2, 0, h)
+                    y2 = np.clip(y + args.cutout_length // 2, 0, h)
+                    x1 = np.clip(x - args.cutout_length // 2, 0, w)
+                    x2 = np.clip(x + args.cutout_length // 2, 0, w)
+
+                    mask[y1: y2, x1: x2] = alpha
+
+                mask = torch.from_numpy(mask)
+                mask = mask.expand_as(input)
+                mask = mask.cuda()
+                input = input * mask
+
+                output = model(input)
+                loss = criterion(output, target)
+            else:
+                # compute output
+                output = model(input)
+                loss = criterion(output, target)    
+        
         else:
             raise Exception('unknown data augmentation process: {}'.format(args.process))
 
