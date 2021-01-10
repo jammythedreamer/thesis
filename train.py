@@ -72,7 +72,7 @@ parser.add_argument('--cutmix_prob', default=0, type=float,
 parser.add_argument('--divmix_prob', default=0, type=float,
                     help='divmix probability')
 parser.add_argument('--cutmixup_alpha', default=1, type=float,
-                    help='mixup interpolation coefficient (default: 1)')
+                    help='cutmixup interpolation coefficient (default: 1)')
 parser.add_argument('--cutmixup_prob', default=0, type=float,
                     help='cutmixup probability')
 parser.add_argument('--aroundmix_alpha', default=1, type=float,
